@@ -573,6 +573,38 @@
     .modal-close-btn:hover {
       color: var(--ink);
     }
+    /* Tab Styling */
+    .tab-container {
+      display: flex;
+      border-bottom: 2px solid var(--border);
+      margin-bottom: var(--space-4);
+      gap: var(--space-2);
+    }
+    .tab-btn {
+      padding: 8px 16px;
+      font-size: 14.5px;
+      font-weight: 600;
+      color: var(--muted);
+      background: none;
+      border: none;
+      border-bottom: 2px solid transparent;
+      margin-bottom: -2px;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+    .tab-btn:hover {
+      color: var(--ink);
+    }
+    .tab-btn.active {
+      color: var(--brand);
+      border-bottom-color: var(--brand);
+    }
+    .tab-content {
+      display: none;
+    }
+    .tab-content.active {
+      display: block;
+    }
   </style>
 <style data-link-removed-style>a[data-link-removed],a[href*="zPythonSafez"]:not([onclick]){pointer-events:none!important;cursor:default!important;opacity:.6}</style></head>
 <body>
@@ -743,6 +775,12 @@
               <option value="single-sheet">รวมทั้งหมดอยู่ใน Sheet เดียวกัน</option>
             </select>
           </div>
+          <div class="inline-input-group" style="margin-top: var(--space-1);">
+            <label for="filterMonthSelect" style="font-size: 13px; font-weight: 600; color: var(--brand);">เลือกดูข้อมูลเดือน:</label>
+            <select id="filterMonthSelect" style="padding: 5px 10px; font-size: 13px; border: 1px solid var(--brand); border-radius: 6px; background: #ffffff; cursor: pointer; font-weight: 600; color: var(--brand);">
+              <option value="all">แสดงทั้งหมด</option>
+            </select>
+          </div>
         </div>
 
         <div>
@@ -779,15 +817,33 @@
   <div id="importModal" class="modal-overlay">
     <div class="modal-content">
       <button type="button" class="modal-close-btn" id="closeImportModalBtn" aria-label="ปิดป๊อปอัพ">✕</button>
-      <h3 style="margin-top: 0; margin-bottom: var(--space-2); font-size: 17px; font-weight: 700; color: var(--brand);">📥 นำเข้าข้อมูลรายชื่อพาร์ทเนอร์</h3>
-      <p style="font-size: 13.5px; color: var(--muted); margin-top: 0; margin-bottom: var(--space-4);">
-        คุณสามารถนำเข้าพาร์ทเนอร์หลายรายการพร้อมกันได้ โดยพิมพ์/วางข้อความ คั่นชื่อพาร์ทเนอร์และเลขผู้เสียภาษีด้วย เครื่องหมายจุลภาค (,) หรือแป้น Tab
-      </p>
+      
+      <!-- Tab Controls -->
+      <div class="tab-container">
+        <button type="button" class="tab-btn active" id="tabImportPartnersBtn">👤 นำเข้าพาร์ทเนอร์</button>
+        <button type="button" class="tab-btn" id="tabImportInvoicesBtn">📄 นำเข้าตารางใบเสร็จ</button>
+      </div>
+
+      <!-- Tab Content: Import Partners -->
+      <div class="tab-content active" id="importPartnersContent">
+        <h3 style="margin-top: 0; margin-bottom: var(--space-2); font-size: 16px; font-weight: 700; color: var(--brand);">📥 นำเข้าข้อมูลรายชื่อพาร์ทเนอร์</h3>
+        <p style="font-size: 13.5px; color: var(--muted); margin-top: 0; margin-bottom: var(--space-4);">
+          คุณสามารถนำเข้าพาร์ทเนอร์หลายรายการพร้อมกันได้ โดยพิมพ์/วางข้อความ คั่นชื่อพาร์ทเนอร์และเลขผู้เสียภาษีด้วย เครื่องหมายจุลภาค (,) หรือแป้น Tab
+        </p>
+      </div>
+
+      <!-- Tab Content: Import Invoices -->
+      <div class="tab-content" id="importInvoicesContent">
+        <h3 style="margin-top: 0; margin-bottom: var(--space-2); font-size: 16px; font-weight: 700; color: var(--brand);">📥 นำเข้าข้อมูลรายการใบกำกับภาษี</h3>
+        <p style="font-size: 13.5px; color: var(--muted); margin-top: 0; margin-bottom: var(--space-4);">
+          คัดลอกตารางจาก Excel แล้วนำมาวางได้โดยตรง ระบบจะดึง วันที่, พาร์ทเนอร์, เลขผู้เสียภาษี, Tax Invoice และยอดซื้อ มารวมลงในตารางให้ทันที
+        </p>
+      </div>
 
       <div class="form-group">
         <label class="form-label" for="importTextArea">
-          <span>วางข้อความรายชื่อพาร์ทเนอร์</span>
-          <span class="form-hint">รูปแบบ: ชื่อพาร์ทเนอร์, เลขผู้เสียภาษี</span>
+          <span id="importTextAreaLabel">วางข้อความรายชื่อพาร์ทเนอร์</span>
+          <span class="form-hint" id="importTextAreaHint">รูปแบบ: ชื่อพาร์ทเนอร์, เลขผู้เสียภาษี</span>
         </label>
         <textarea
           id="importTextArea"
@@ -1053,18 +1109,56 @@
         });
       }
 
+      const filterMonthSelect = document.getElementById('filterMonthSelect');
+
+      function updateMonthFilterDropdown() {
+        const prevValue = filterMonthSelect.value || 'all';
+        // Get all unique months from entries
+        const monthsSet = new Set();
+        entries.forEach(r => {
+          if (r.date) {
+            monthsSet.add(r.date.substring(0, 7)); // "YYYY-MM"
+          }
+        });
+        const sortedMonths = Array.from(monthsSet).sort();
+
+        // Clear and rebuild select options
+        filterMonthSelect.innerHTML = '<option value="all">แสดงทั้งหมด</option>';
+        sortedMonths.forEach(m => {
+          const opt = document.createElement('option');
+          opt.value = m;
+          opt.textContent = getThaiMonthYearName(m + '-01');
+          filterMonthSelect.appendChild(opt);
+        });
+
+        // Restore previous value if it still exists, else fallback to 'all'
+        if (sortedMonths.includes(prevValue)) {
+          filterMonthSelect.value = prevValue;
+        } else {
+          filterMonthSelect.value = 'all';
+        }
+      }
+
       // Render Excel-like Preview Table
       function renderTable() {
+        updateMonthFilterDropdown();
         const groupDates = groupDateCheckbox.checked;
+        const filterMonth = filterMonthSelect.value || 'all';
+
+        let filteredEntries = entries;
+        if (filterMonth !== 'all') {
+          filteredEntries = entries.filter(r => r.date && r.date.substring(0, 7) === filterMonth);
+        }
+
         bannerTitleCell.textContent = sheetTitleInput.value.trim() || 'ยอดซื้อ';
 
-        if (entries.length === 0) {
-          clearAllBtn.style.display = 'none';
+        if (filteredEntries.length === 0) {
+          clearAllBtn.style.display = entries.length > 0 ? 'inline-flex' : 'none';
           invoiceTableBody.innerHTML = `
             <tr>
               <td colspan="7" class="empty-sheet-state">
-                <p>ยังไม่มีรายการใบเสร็จ/ใบกำกับภาษีในตาราง</p>
-                <span style="font-size: 13px;">กรอกข้อมูลด้านซ้ายเพื่อเพิ่มรายการ หรือกดปุ่ม <strong>"โหลดข้อมูลจากภาพตัวอย่าง"</strong> ด้านบน</span>
+                <p>${entries.length === 0 ? 'ยังไม่มีรายการใบเสร็จ/ใบกำกับภาษีในตาราง' : 'ไม่มีรายการในเดือนที่เลือก'}</p>
+                <span style="font-size: 13px;">กรอกข้อมูลด้านซ้ายเพื่อเพิ่มรายการ หรือเลือกแสดงทั้งหมดเพื่อความสะดวก</span>
               </td>
             </tr>
           `;
@@ -1074,7 +1168,7 @@
         clearAllBtn.style.display = 'inline-flex';
 
         let lastDate = null;
-        let tableRowsHtml = entries.map((row, idx) => {
+        let tableRowsHtml = filteredEntries.map((row, idx) => {
           const showDate = !groupDates || row.date !== lastDate;
           lastDate = row.date;
           const displayDate = showDate ? formatDateMDY(row.date) : '';
@@ -1097,7 +1191,7 @@
         }).join('');
 
         // Calculate and append the total row
-        const totalAmount = entries.reduce((sum, row) => sum + (Number(row.amount) || 0), 0);
+        const totalAmount = filteredEntries.reduce((sum, row) => sum + (Number(row.amount) || 0), 0);
         tableRowsHtml += `
           <tr style="font-weight: 700; background-color: #f8fafc;">
             <td colspan="5" style="text-align: right; padding-right: 12px; font-weight: 700;">รวมทั้งสิ้น</td>
@@ -1233,6 +1327,7 @@
 
       sheetTitleInput.addEventListener('input', renderTable);
       groupDateCheckbox.addEventListener('change', renderTable);
+      filterMonthSelect.addEventListener('change', renderTable);
 
       clearAllBtn.addEventListener('click', function () {
         entries = [];
@@ -1518,7 +1613,7 @@
         }
       });
 
-      // --- Import Partners Logic ---
+      // --- Import Partners & Invoices Logic ---
       const importModal = document.getElementById('importModal');
       const openImportBtn = document.getElementById('openImportBtn');
       const closeImportModalBtn = document.getElementById('closeImportModalBtn');
@@ -1531,21 +1626,57 @@
       const importCountBadge = document.getElementById('importCountBadge');
       const importModalError = document.getElementById('importModalError');
 
+      const tabImportPartnersBtn = document.getElementById('tabImportPartnersBtn');
+      const tabImportInvoicesBtn = document.getElementById('tabImportInvoicesBtn');
+      const importPartnersContent = document.getElementById('importPartnersContent');
+      const importInvoicesContent = document.getElementById('importInvoicesContent');
+      const importTextAreaLabel = document.getElementById('importTextAreaLabel');
+      const importTextAreaHint = document.getElementById('importTextAreaHint');
+
+      let importTab = 'partners'; // 'partners' or 'invoices'
       let parsedImportPartners = [];
+      let parsedImportInvoices = [];
 
       function showImportModal() {
         importModal.classList.add('open');
+        switchTab('partners');
+      }
+
+      function hideImportModal() {
+        importModal.classList.remove('open');
+      }
+
+      function switchTab(tab) {
+        importTab = tab;
         importTextArea.value = '';
         importFileInput.value = '';
         importPreview.style.display = 'none';
         importModalError.classList.remove('visible');
         confirmImportBtn.disabled = true;
         parsedImportPartners = [];
+        parsedImportInvoices = [];
+
+        if (tab === 'partners') {
+          tabImportPartnersBtn.classList.add('active');
+          tabImportInvoicesBtn.classList.remove('active');
+          importPartnersContent.classList.add('active');
+          importInvoicesContent.classList.remove('active');
+          importTextAreaLabel.textContent = 'วางข้อความรายชื่อพาร์ทเนอร์';
+          importTextAreaHint.textContent = 'รูปแบบ: ชื่อพาร์ทเนอร์, เลขผู้เสียภาษี';
+          importTextArea.placeholder = 'เช่น:\nบริษัท แสนดี เทรดดิ้ง จำกัด, ID#0105565123456\nหจก. พลังงานไทย, 0403560001122';
+        } else {
+          tabImportPartnersBtn.classList.remove('active');
+          tabImportInvoicesBtn.classList.add('active');
+          importPartnersContent.classList.remove('active');
+          importInvoicesContent.classList.add('active');
+          importTextAreaLabel.textContent = 'วางข้อมูลตารางใบเสร็จใบกำกับภาษี';
+          importTextAreaHint.textContent = 'คัดลอกทั้งตารางจาก Excel แล้วนำมาวางได้โดยตรง';
+          importTextArea.placeholder = 'วางแถวข้อมูลจาก Excel ที่คัดลอกมา เช่น:\n1\t9/1/2026\tหจก.โซ่ทอง\tID#0403560004680\tSTA2260900025\t6,480.00\n2\t\tบริษัท ประชาพงษ์ ฟู้ดส์ จำกัด\tID#0105565001761\tORD-20260901-0045\t1,850.00';
+        }
       }
 
-      function hideImportModal() {
-        importModal.classList.remove('open');
-      }
+      tabImportPartnersBtn.addEventListener('click', () => switchTab('partners'));
+      tabImportInvoicesBtn.addEventListener('click', () => switchTab('invoices'));
 
       openImportBtn.addEventListener('click', showImportModal);
       closeImportModalBtn.addEventListener('click', hideImportModal);
@@ -1563,64 +1694,168 @@
           importPreview.style.display = 'none';
           confirmImportBtn.disabled = true;
           parsedImportPartners = [];
+          parsedImportInvoices = [];
           return;
         }
 
         const lines = text.split(/\r?\n/);
-        parsedImportPartners = [];
 
-        lines.forEach(line => {
-          const trimmed = line.trim();
-          if (!trimmed) return;
+        if (importTab === 'partners') {
+          parsedImportPartners = [];
+          lines.forEach(line => {
+            const trimmed = line.trim();
+            if (!trimmed) return;
 
-          // support tab or comma delimiters
-          let cols = [];
-          if (trimmed.includes('\t')) {
-            cols = trimmed.split('\t');
-          } else if (trimmed.includes(',')) {
-            cols = trimmed.split(',');
-          } else {
-            // try space separating
-            const spaceIdx = trimmed.lastIndexOf(' ');
-            if (spaceIdx !== -1) {
-              cols = [trimmed.substring(0, spaceIdx), trimmed.substring(spaceIdx + 1)];
+            let cols = [];
+            if (trimmed.includes('\t')) {
+              cols = trimmed.split('\t');
+            } else if (trimmed.includes(',')) {
+              cols = trimmed.split(',');
             } else {
-              cols = [trimmed];
+              const spaceIdx = trimmed.lastIndexOf(' ');
+              if (spaceIdx !== -1) {
+                cols = [trimmed.substring(0, spaceIdx), trimmed.substring(spaceIdx + 1)];
+              } else {
+                cols = [trimmed];
+              }
             }
+
+            let name = cols[0] ? cols[0].trim() : '';
+            let taxIdInputVal = cols[1] ? cols[1].trim() : '';
+
+            if (!name) return;
+
+            const normTax = normalizeTaxId(taxIdInputVal);
+            const rawDigs = extractDigits(normTax);
+
+            parsedImportPartners.push({
+              name: name,
+              taxId: normTax,
+              rawDigits: rawDigs
+            });
+          });
+
+          if (parsedImportPartners.length === 0) {
+            importPreview.style.display = 'none';
+            confirmImportBtn.disabled = true;
+            return;
           }
 
-          let name = cols[0] ? cols[0].trim() : '';
-          let taxIdInputVal = cols[1] ? cols[1].trim() : '';
+          importCountBadge.textContent = `${parsedImportPartners.length} พาร์ทเนอร์`;
+          importPreviewList.innerHTML = parsedImportPartners.slice(0, 15).map(p => `
+            <div style="display: flex; justify-content: space-between; border-bottom: 1px dashed #e4e7ec; padding-bottom: 2px;">
+              <span style="font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 260px;">${escapeHtml(p.name)}</span>
+              <span style="font-family: monospace; color: var(--muted);">${escapeHtml(p.taxId || '(ไม่มีเลขผู้เสียภาษี)')}</span>
+            </div>
+          `).join('') + (parsedImportPartners.length > 15 ? `<div style="text-align: center; font-size: 11px; color: var(--muted); margin-top: 4px;">... และอีก ${parsedImportPartners.length - 15} รายการ ...</div>` : '');
 
-          if (!name) return;
+          importPreview.style.display = 'block';
+          confirmImportBtn.disabled = false;
 
-          const normTax = normalizeTaxId(taxIdInputVal);
-          const rawDigs = extractDigits(normTax);
+        } else {
+          // Invoices / table import mode
+          parsedImportInvoices = [];
+          let lastSeenDate = '2026-09-01';
 
-          parsedImportPartners.push({
-            name: name,
-            taxId: normTax,
-            rawDigits: rawDigs
+          lines.forEach(line => {
+            const trimmed = line.trim();
+            if (!trimmed) return;
+
+            // skip headers or sum rows
+            if (trimmed.includes('ลำดับ') || trimmed.includes('วดป.') || trimmed.includes('รายการ') || trimmed.includes('ยอดซื้อเดือน') || trimmed.includes('รวมทั้งสิ้น')) {
+              return;
+            }
+
+            let cols = [];
+            if (trimmed.includes('\t')) {
+              cols = trimmed.split('\t');
+            } else if (trimmed.includes(',')) {
+              cols = trimmed.split(',');
+            } else {
+              return; // skip rows without delimiters
+            }
+
+            if (cols.length < 3) return;
+
+            // Expect layout: seq, date, partner, taxId, invoiceNo, amount
+            // If length is less than 6 (e.g. copied only some columns), align accordingly
+            let rawDate = '';
+            let partnerName = '';
+            let taxId = '';
+            let invoiceNo = '';
+            let rawAmount = '0';
+
+            if (cols.length >= 6) {
+              rawDate = cols[1] ? cols[1].trim() : '';
+              partnerName = cols[2] ? cols[2].trim() : '';
+              taxId = cols[3] ? cols[3].trim() : '';
+              invoiceNo = cols[4] ? cols[4].trim() : '';
+              rawAmount = cols[5] ? cols[5].trim() : '';
+            } else {
+              // fallback guess
+              rawDate = cols[0] ? cols[0].trim() : '';
+              partnerName = cols[1] ? cols[1].trim() : '';
+              taxId = cols[2] ? cols[2].trim() : '';
+              invoiceNo = cols[3] ? cols[3].trim() : '';
+              rawAmount = cols[4] ? cols[4].trim() : '0';
+            }
+
+            if (!partnerName || partnerName.toLowerCase().includes('รวมทั้งสิ้น')) return;
+
+            // Date parsing (carry over previous date if blank because of grouped dates)
+            let finalIsoDate = '';
+            if (rawDate) {
+              // check if format is M/D/YYYY
+              const mdyMatch = rawDate.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+              if (mdyMatch) {
+                const mm = mdyMatch[1].padStart(2, '0');
+                const dd = mdyMatch[2].padStart(2, '0');
+                const yyyy = mdyMatch[3];
+                finalIsoDate = `${yyyy}-${mm}-${dd}`;
+              } else {
+                // check if YYYY-MM-DD
+                const isoMatch = rawDate.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+                if (isoMatch) {
+                  finalIsoDate = rawDate;
+                } else {
+                  finalIsoDate = lastSeenDate;
+                }
+              }
+            } else {
+              finalIsoDate = lastSeenDate;
+            }
+            lastSeenDate = finalIsoDate;
+
+            const amount = parseFloat(rawAmount.replace(/,/g, '')) || 0;
+            const normTax = normalizeTaxId(taxId);
+
+            parsedImportInvoices.push({
+              date: finalIsoDate,
+              partnerName: partnerName,
+              taxId: normTax,
+              invoiceNo: invoiceNo,
+              amount: amount
+            });
           });
-        });
 
-        if (parsedImportPartners.length === 0) {
-          importPreview.style.display = 'none';
-          confirmImportBtn.disabled = true;
-          return;
+          if (parsedImportInvoices.length === 0) {
+            importPreview.style.display = 'none';
+            confirmImportBtn.disabled = true;
+            return;
+          }
+
+          importCountBadge.textContent = `${parsedImportInvoices.length} รายการใบเสร็จ`;
+          importPreviewList.innerHTML = parsedImportInvoices.slice(0, 15).map(inv => `
+            <div style="display: flex; justify-content: space-between; border-bottom: 1px dashed #e4e7ec; padding-bottom: 2px;">
+              <span style="font-family: monospace; color: var(--muted);">${escapeHtml(formatDateMDY(inv.date))}</span>
+              <span style="font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 180px;">${escapeHtml(inv.partnerName)}</span>
+              <span style="font-weight: 700; color: var(--brand);">${formatAmount(inv.amount)}</span>
+            </div>
+          `).join('') + (parsedImportInvoices.length > 15 ? `<div style="text-align: center; font-size: 11px; color: var(--muted); margin-top: 4px;">... และอีก ${parsedImportInvoices.length - 15} รายการ ...</div>` : '');
+
+          importPreview.style.display = 'block';
+          confirmImportBtn.disabled = false;
         }
-
-        // Render preview list (limit to 15 for performance)
-        importCountBadge.textContent = `${parsedImportPartners.length} รายการ`;
-        importPreviewList.innerHTML = parsedImportPartners.slice(0, 15).map(p => `
-          <div style="display: flex; justify-content: space-between; border-bottom: 1px dashed #e4e7ec; padding-bottom: 2px;">
-            <span style="font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 260px;">${escapeHtml(p.name)}</span>
-            <span style="font-family: monospace; color: var(--muted);">${escapeHtml(p.taxId || '(ไม่มีเลขผู้เสียภาษี)')}</span>
-          </div>
-        `).join('') + (parsedImportPartners.length > 15 ? `<div style="text-align: center; font-size: 11px; color: var(--muted); margin-top: 4px;">... และอีก ${parsedImportPartners.length - 15} รายการ ...</div>` : '');
-
-        importPreview.style.display = 'block';
-        confirmImportBtn.disabled = false;
       }
 
       importTextArea.addEventListener('input', function() {
@@ -1645,32 +1880,76 @@
       });
 
       confirmImportBtn.addEventListener('click', function() {
-        if (parsedImportPartners.length === 0) return;
+        if (importTab === 'partners') {
+          if (parsedImportPartners.length === 0) return;
 
-        let addedCount = 0;
-        parsedImportPartners.forEach(newP => {
-          // Check for duplicate in name or taxId digits
-          const dup = partners.find(p => 
-            p.name.toLowerCase() === newP.name.toLowerCase() || 
-            (newP.rawDigits && p.rawDigits === newP.rawDigits)
-          );
-          if (!dup) {
-            partners.unshift(newP);
-            addedCount++;
-          }
-        });
+          let addedCount = 0;
+          parsedImportPartners.forEach(newP => {
+            const dup = partners.find(p => 
+              p.name.toLowerCase() === newP.name.toLowerCase() || 
+              (newP.rawDigits && p.rawDigits === newP.rawDigits)
+            );
+            if (!dup) {
+              partners.unshift(newP);
+              addedCount++;
+            }
+          });
 
-        renderPartnerChips();
-        hideImportModal();
+          renderPartnerChips();
+          hideImportModal();
 
-        // Show a success message briefly in formError style
-        formError.textContent = `นำเข้าสำเร็จ! เพิ่มพาร์ทเนอร์ใหม่ ${addedCount} รายการ`;
-        formError.style.color = 'var(--brand)';
-        formError.classList.add('visible');
-        setTimeout(() => {
-          formError.classList.remove('visible');
-          formError.style.color = 'var(--danger)'; // restore color
-        }, 4000);
+          formError.textContent = `นำเข้าสำเร็จ! เพิ่มพาร์ทเนอร์ใหม่ ${addedCount} รายการ`;
+          formError.style.color = 'var(--brand)';
+          formError.classList.add('visible');
+          setTimeout(() => {
+            formError.classList.remove('visible');
+            formError.style.color = 'var(--danger)';
+          }, 4000);
+
+        } else {
+          // Import Invoices
+          if (parsedImportInvoices.length === 0) return;
+
+          parsedImportInvoices.forEach(inv => {
+            entries.push({
+              id: ++nextId,
+              date: inv.date,
+              partnerName: inv.partnerName,
+              taxId: inv.taxId,
+              invoiceNo: inv.invoiceNo,
+              amount: inv.amount
+            });
+
+            // Auto-save new partner if not already present
+            const digits = extractDigits(inv.taxId);
+            const dupPartner = partners.find(p => 
+              p.name.toLowerCase() === inv.partnerName.toLowerCase() || 
+              (digits && p.rawDigits === digits)
+            );
+            if (!dupPartner) {
+              partners.unshift({
+                name: inv.partnerName,
+                taxId: inv.taxId,
+                rawDigits: digits
+              });
+            }
+          });
+
+          // Sort chronologically by date
+          entries.sort((a, b) => a.date.localeCompare(b.date));
+
+          renderPartnerChips();
+          resetFormMode();
+          hideImportModal();
+
+          formError.textContent = `นำเข้าสำเร็จ! เพิ่มข้อมูลใบกำกับภาษี ${parsedImportInvoices.length} รายการลงในตาราง`;
+          formError.style.color = 'var(--brand)';
+          formError.classList.add('visible');
+          setTimeout(() => {
+            formError.classList.remove('visible');
+            formError.style.color = 'var(--danger)';
+          }, 4000);
+        }
       });
 
       // Initialize UI
