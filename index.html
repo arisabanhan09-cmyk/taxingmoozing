@@ -834,9 +834,9 @@
 
       <!-- Tab Content: Import Invoices -->
       <div class="tab-content" id="importInvoicesContent">
-        <h3 style="margin-top: 0; margin-bottom: var(--space-2); font-size: 16px; font-weight: 700; color: var(--brand);">📥 นำเข้าข้อมูลรายการใบกำกับภาษี</h3>
+        <h3 style="margin-top: 0; margin-bottom: var(--space-2); font-size: 16px; font-weight: 700; color: var(--brand);">📥 นำเข้าตารางข้อมูลเพื่อเพิ่มต่อจากของเดิม (Append)</h3>
         <p style="font-size: 13.5px; color: var(--muted); margin-top: 0; margin-bottom: var(--space-4);">
-          คัดลอกตารางจาก Excel แล้วนำมาวางได้โดยตรง ระบบจะดึง วันที่, พาร์ทเนอร์, เลขผู้เสียภาษี, Tax Invoice และยอดซื้อ มารวมลงในตารางให้ทันที
+          คัดลอกตารางจาก Excel แล้วนำมาวางได้โดยตรง ระบบจะทำการ<strong>เพิ่มและรวม (Append)</strong> รายการใหม่ทั้งหมดต่อท้ายข้อมูลเดิมของคุณในระบบทันทีโดยไม่เขียนทับ!
         </p>
       </div>
 
@@ -1755,7 +1755,7 @@
         } else {
           // Invoices / table import mode
           parsedImportInvoices = [];
-          let lastSeenDate = '2026-09-01';
+          let lastSeenDate = dateInput.value || '2026-09-01';
 
           lines.forEach(line => {
             const trimmed = line.trim();
