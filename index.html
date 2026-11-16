@@ -616,6 +616,9 @@
         <p>ค้นหาอัตโนมัติด้วยชื่อพาร์ทเนอร์หรือเลขผู้เสียภาษี พร้อมส่งออกตารางรูปแบบ Excel</p>
       </div>
       <div class="header-actions">
+        <button type="button" class="btn btn-secondary" id="openImportHeaderBtn" style="color: var(--brand); border-color: var(--brand);" title="นำเข้าข้อมูลตารางเก่าที่คีย์สะสมไว้จาก Excel">
+          📥 นำเข้าข้อมูลเดิมจาก Excel
+        </button>
         <button type="button" class="btn btn-secondary" id="loadSampleBtn" title="โหลดข้อมูล 16 รายการตามภาพตัวอย่าง">
           โหลดข้อมูลจากภาพตัวอย่าง
         </button>
@@ -838,6 +841,11 @@
         <p style="font-size: 13.5px; color: var(--muted); margin-top: 0; margin-bottom: var(--space-4);">
           คัดลอกตารางจาก Excel แล้วนำมาวางได้โดยตรง ระบบจะทำการ<strong>เพิ่มและรวม (Append)</strong> รายการใหม่ทั้งหมดต่อท้ายข้อมูลเดิมของคุณในระบบทันทีโดยไม่เขียนทับ!
         </p>
+        <div style="margin-bottom: var(--space-3);">
+          <button type="button" class="btn btn-secondary" id="loadOneDriveSampleBtn" style="padding: 5px 10px; font-size: 12.5px; color: var(--brand); border-color: var(--brand-soft); background: var(--brand-soft); width: 100%; display: flex; align-items: center; justify-content: center; gap: 4px;">
+            💡 โหลดข้อมูลชุดใหม่ตามภาพตัวอย่าง OneDrive (22 รายการ)
+          </button>
+        </div>
       </div>
 
       <div class="form-group">
@@ -891,7 +899,18 @@
         { name: 'บริษัท เคี้ยงเทรดดิ้ง จำกัด', taxId: 'ID#0405560000937', rawDigits: '0405560000937' },
         { name: 'บริษัท ซีพีเอฟ โกลบอล ฟู้ด โซลูชั่น จำกัด (มหาชน)', taxId: 'ID#0107566000135', rawDigits: '0107566000135' },
         { name: 'ร้านแอน เทรดดิ้ง', taxId: 'ID#0403560005287', rawDigits: '0403560005287' },
-        { name: 'Duangporn Plastic Co.,Ltd.', taxId: 'ID#0405560001313', rawDigits: '0405560001313' }
+        { name: 'Duangporn Plastic Co.,Ltd.', taxId: 'ID#0405560001313', rawDigits: '0405560001313' },
+        { name: 'บริษัท หมูณัฐ จำกัด สาขาโนนทัน', taxId: 'ID#039555000186', rawDigits: '039555000186' },
+        { name: 'บริษัท ณัฐภัณฑ์ ฟู้ด จำกัด', taxId: 'ID#455559000651', rawDigits: '455559000651' },
+        { name: 'บริษัท แอสเอส คอร์ปอเรชั่น 2019 จำกัด', taxId: 'ID#0475529000041', rawDigits: '0475529000041' },
+        { name: 'บริษัท เบทาโกรเกษตรอุตสาหกรรม จำกัด', taxId: 'ID#0105516006448', rawDigits: '0105516006448' },
+        { name: 'บริษัท ซีพี แอ็กซ์ตร้า จำกัด (มหาชน)', taxId: 'ID#0107567000414', rawDigits: '0107567000414' },
+        { name: 'บริษัท น้ำดื่มคุณนิด จำกัด', taxId: 'ID#0415550000357', rawDigits: '0415550000357' },
+        { name: 'บริษัท ไอ.ที.วัน จำกัด', taxId: 'ID#0105526007081', rawDigits: '0105526007081' },
+        { name: 'บริษัท ไทยน้ำทิพย์ คอร์ปอเรชั่น จำกัด', taxId: 'ID#0107568000027', rawDigits: '0107568000027' },
+        { name: 'บริษัท ท็อปเทน โอโต้ ฟู้ดส์ จำกัด', taxId: 'ID#0215562000511', rawDigits: '0215562000511' },
+        { name: 'บริษัท โโกดังน้ำ จำกัด', taxId: 'ID#0405568004575', rawDigits: '0405568004575' },
+        { name: 'บริษัท ธนสิทธิ์ ดีสทริบิวชั่น จำกัด', taxId: 'ID#040555001572', rawDigits: '040555001572' }
       ];
 
       // The 16 rows from the uploaded image (available via "โหลดข้อมูลจากภาพตัวอย่าง" button)
@@ -1646,6 +1665,14 @@
         importModal.classList.remove('open');
       }
 
+      const openImportHeaderBtn = document.getElementById('openImportHeaderBtn');
+      if (openImportHeaderBtn) {
+        openImportHeaderBtn.addEventListener('click', function() {
+          importModal.classList.add('open');
+          switchTab('invoices');
+        });
+      }
+
       function switchTab(tab) {
         importTab = tab;
         importTextArea.value = '';
@@ -1677,6 +1704,36 @@
 
       tabImportPartnersBtn.addEventListener('click', () => switchTab('partners'));
       tabImportInvoicesBtn.addEventListener('click', () => switchTab('invoices'));
+
+      const loadOneDriveSampleBtn = document.getElementById('loadOneDriveSampleBtn');
+      if (loadOneDriveSampleBtn) {
+        loadOneDriveSampleBtn.addEventListener('click', function() {
+          const rawText = `127\t\tบริษัท หมูณัฐ จำกัด สาขาโนนทัน\tID#039555000186\tABBMN122609220071\t712.00
+128\t\tบริษัท ณัฐภัณฑ์ ฟู้ด จำกัด\tID#455559000651\tSH260800159\t420.00
+129\t\tบริษัท ซีพีเอฟ โกลบอล ฟู้ด โซลูชั่น จำกัด (มหาชน)\tID#0107566000135\tN69ATK026734\t2,780.00
+130\t\tบริษัท แอสเอส คอร์ปอเรชั่น 2019 จำกัด\tID#0475529000041\t202P01117658\t362.39
+131\t9/23/2026\tบริษัท มหาชัยกรุ๊ป ชวนชื่น จำกัด\tID#0405568006136\tINV69092844\t4,690.00
+132\t\tบริษัท เบทาโกรเกษตรอุตสาหกรรม จำกัด\tID#0105516006448\t5062785363\t1,339.50
+133\t\tบริษัท ซีพี แอ็กซ์ตร้า จำกัด (มหาชน)\tID#0107567000414\t0128 41164914\t3,902.00
+134\t\tขอนแก่นห้องเย็น ชาญฟูดส์\tID# 0105558071141\tS12600099/296\t1,080.00
+135\t\tบริษัท น้ำดื่มคุณนิด จำกัด\tID#0415550000357\tNV260920121\t4,175.00
+136\t9/24/2026\tบริษัท เบทาโกรเกษตรอุตสาหกรรม จำกัด\tID#0105516006448\t5062785462\t1,470.00
+137\t\tบริษัท ไอ.ที.วัน จำกัด\tID#0105526007081\tHS103826007902\t2,816.55
+138\t\tบริษัท ซีพีเอฟ โกลบอล ฟู้ด โซลูชั่น จำกัด (มหาชน)\tID#0107566000135\tN69ATK026934\t2,740.00
+139\t\tบริษัท ซีพีเอฟ โกลบอล ฟู้ด โซลูชั่น จำกัด (มหาชน)\tID#0107566000135\tN69AIC069147\t735.00
+140\t\tบริษัท มหาชัยกรุ๊ป ชวนชื่น จำกัด\tID#0405568006136\tINV69092954\t4,115.00
+141\t\tบริษัท ไทยน้ำทิพย์ คอร์ปอเรชั่น จำกัด\tID#0107568000027\t493 0863036\t3,632.96
+142\t\tบริษัท ท็อปเทน โอโต้ ฟู้ดส์ จำกัด\tID#0215562000511\t07 76\t6,140.00
+143\t9/25/2026\tขอนแก่นห้องเย็น ชาญฟูดส์\tID# 0105558071141\tC42600030/046\t1,170.00
+144\t\tบริษัท ประชาพงษ์ ฟู้ดส์ จำกัด\tID#0105565001761\tORD-20260925-0040\t1,075.00
+145\t\tหจก.โซ่ทอง\tID#0403560004680\tSTA2260900611\t1,110.00
+146\t\tบริษัท โโกดังน้ำ จำกัด\tID#0405568004575\tCA2026095004\t4,300.00
+147\t\tบริษัท ซีพีเอฟ โกลบอล ฟู้ด โซลูชั่น จำกัด (มหาชน)\tID#0107566000135\tN69ATK027062\t2,730.00
+148\t\tบริษัท ธนสิทธิ์ ดีสทริบิวชั่น จำกัด\tID#040555001572\tI0260901233\t1,026.54`;
+          importTextArea.value = rawText;
+          parseAndPreviewText(rawText);
+        });
+      }
 
       openImportBtn.addEventListener('click', showImportModal);
       closeImportModalBtn.addEventListener('click', hideImportModal);
