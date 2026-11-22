@@ -1167,9 +1167,11 @@
         let filteredEntries = entries;
         if (filterMonth !== 'all') {
           filteredEntries = entries.filter(r => r.date && r.date.substring(0, 7) === filterMonth);
+          const monthLabel = getThaiMonthYearName(filterMonth + '-01');
+          bannerTitleCell.textContent = `ยอดซื้อเดือน ${monthLabel}`;
+        } else {
+          bannerTitleCell.textContent = sheetTitleInput.value.trim() || 'ยอดซื้อรวมทุกเดือน';
         }
-
-        bannerTitleCell.textContent = sheetTitleInput.value.trim() || 'ยอดซื้อ';
 
         if (filteredEntries.length === 0) {
           clearAllBtn.style.display = entries.length > 0 ? 'inline-flex' : 'none';
