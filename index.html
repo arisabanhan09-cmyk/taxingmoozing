@@ -1920,6 +1920,14 @@
       importTextArea.addEventListener('input', function() {
         parseAndPreviewText(this.value);
       });
+      importTextArea.addEventListener('paste', function() {
+        setTimeout(() => {
+          parseAndPreviewText(this.value);
+        }, 50);
+      });
+      importTextArea.addEventListener('change', function() {
+        parseAndPreviewText(this.value);
+      });
 
       importFileInput.addEventListener('change', function(e) {
         const file = e.target.files[0];
