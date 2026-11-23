@@ -7,6 +7,9 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <!-- Firebase Compat SDKs -->
+  <script src="about:invalid#zPythonSafez"></script>
+  <script src="about:invalid#zPythonSafez"></script>
   <style>
     :root {
       --bg: #f4f6f8;
@@ -619,6 +622,9 @@
         <button type="button" class="btn btn-secondary" id="openImportHeaderBtn" style="color: var(--brand); border-color: var(--brand);" title="นำเข้าข้อมูลตารางเก่าที่คีย์สะสมไว้จาก Excel">
           📥 นำเข้าข้อมูลเดิมจาก Excel
         </button>
+        <button type="button" class="btn btn-secondary" id="openDbSettingsBtn" style="color: var(--accent); border-color: var(--accent);" title="เชื่อมต่อคลาวด์ Firebase Firestore เพื่อซิงก์และจัดเก็บข้อมูลออนไลน์">
+          ⚙️ เชื่อมต่อ Firebase
+        </button>
         <button type="button" class="btn btn-secondary" id="loadSampleBtn" title="โหลดข้อมูล 16 รายการตามภาพตัวอย่าง">
           โหลดข้อมูลจากภาพตัวอย่าง
         </button>
@@ -886,6 +892,56 @@
     </div>
   </div>
 
+  <!-- DB Settings Modal -->
+  <div id="dbSettingsModal" class="modal-overlay">
+    <div class="modal-content" style="max-width: 480px;">
+      <button type="button" class="modal-close-btn" id="closeDbSettingsModalBtn" aria-label="ปิดป๊อปอัพ">✕</button>
+      <h3 style="margin-top: 0; margin-bottom: var(--space-2); font-size: 17px; font-weight: 700; color: var(--brand);">⚙️ เชื่อมต่อ Firebase Firestore</h3>
+      <p style="font-size: 13px; color: var(--muted); margin-top: 0; margin-bottom: var(--space-4);">
+        หากต้องการเก็บข้อมูลออนไลน์ หรือเชื่อมบัญชีเพื่อคีย์พร้อมกันหลายคน สามารถใส่ Firebase Config ด้านล่างเพื่อเริ่มใช้งานระบบคลาวด์ได้ค่ะ (ข้อมูลเก็บไว้ในเบราว์เซอร์เครื่องนี้เพื่อความปลอดภัย)
+      </p>
+
+      <div class="form-group">
+        <label class="checkbox-label" style="font-weight: 700; margin-bottom: var(--space-2);">
+          <input type="checkbox" id="enableFirebaseCheckbox">
+          <span>เปิดใช้งานระบบ Firebase Firestore ซิงก์ข้อมูลคลาวด์</span>
+        </label>
+      </div>
+
+      <div id="firebaseConfigFields" style="display: none; border-top: 1px dashed var(--border); padding-top: var(--space-3); margin-top: var(--space-2);">
+        <div class="form-group" style="margin-bottom: var(--space-2);">
+          <label class="form-label" for="fbApiKey" style="font-size: 13px;">apiKey</label>
+          <input type="text" id="fbApiKey" class="form-control" style="padding: 6px 10px; font-size: 13px;" placeholder="AIzaSy...">
+        </div>
+        <div class="form-group" style="margin-bottom: var(--space-2);">
+          <label class="form-label" for="fbAuthDomain" style="font-size: 13px;">authDomain</label>
+          <input type="text" id="fbAuthDomain" class="form-control" style="padding: 6px 10px; font-size: 13px;" placeholder="your-project.firebaseapp.com">
+        </div>
+        <div class="form-group" style="margin-bottom: var(--space-2);">
+          <label class="form-label" for="fbProjectId" style="font-size: 13px;">projectId</label>
+          <input type="text" id="fbProjectId" class="form-control" style="padding: 6px 10px; font-size: 13px;" placeholder="your-project-id">
+        </div>
+        <div class="form-group" style="margin-bottom: var(--space-2);">
+          <label class="form-label" for="fbAppId" style="font-size: 13px;">appId</label>
+          <input type="text" id="fbAppId" class="form-control" style="padding: 6px 10px; font-size: 13px;" placeholder="1:12345:web:abcd...">
+        </div>
+        <div class="form-group" style="margin-bottom: var(--space-2);">
+          <label class="form-label" for="fbCollection" style="font-size: 13px;">ชื่อ Collection (Firestore)</label>
+          <input type="text" id="fbCollection" class="form-control" style="padding: 6px 10px; font-size: 13px;" value="tax_invoices">
+        </div>
+      </div>
+
+      <div id="firebaseStatus" style="font-size: 13px; font-weight: 600; margin-bottom: var(--space-3); color: var(--muted); margin-top: var(--space-2);">
+        สถานะ: กำลังใช้งานระบบบันทึกในเครื่อง (LocalStorage)
+      </div>
+
+      <div style="display: flex; justify-content: flex-end; gap: var(--space-2);">
+        <button type="button" class="btn btn-secondary" id="cancelDbSettingsBtn">ยกเลิก</button>
+        <button type="button" class="btn btn-primary" id="saveDbSettingsBtn">บันทึกและเชื่อมต่อ</button>
+      </div>
+    </div>
+  </div>
+
   <script>
     (function () {
       // Initial Partner Directory extracted directly from the user's uploaded image
@@ -937,6 +993,45 @@
       let entries = [];
       let editingId = null;
       let nextId = 100;
+
+      // --- Local Storage Persistence ---
+      const STORAGE_KEYS = {
+        ENTRIES: 'tax_invoice_entries_v3',
+        PARTNERS: 'tax_invoice_partners_v3',
+        FB_CONFIG: 'tax_invoice_fb_config_v3'
+      };
+
+      function loadStoredData() {
+        try {
+          const storedEntries = localStorage.getItem(STORAGE_KEYS.ENTRIES);
+          if (storedEntries) {
+            entries = JSON.parse(storedEntries);
+          }
+          const storedPartners = localStorage.getItem(STORAGE_KEYS.PARTNERS);
+          if (storedPartners) {
+            const parsed = JSON.parse(storedPartners);
+            parsed.forEach(p => {
+              const dup = partners.find(ip => ip.name.toLowerCase() === p.name.toLowerCase() || (p.rawDigits && ip.rawDigits === p.rawDigits));
+              if (!dup) partners.push(p);
+            });
+          }
+        } catch (e) {
+          console.warn('LocalStorage load failed', e);
+        }
+      }
+
+      function saveStoredData() {
+        try {
+          localStorage.setItem(STORAGE_KEYS.ENTRIES, JSON.stringify(entries));
+          localStorage.setItem(STORAGE_KEYS.PARTNERS, JSON.stringify(partners));
+        } catch (e) {
+          console.warn('LocalStorage save failed', e);
+        }
+        // Sync to Firebase if configured
+        syncWithFirestore();
+      }
+
+      loadStoredData();
 
       // DOM elements
       const invoiceForm = document.getElementById('invoiceForm');
@@ -1237,6 +1332,7 @@
             if (editingId === id) {
               resetFormMode();
             }
+            saveStoredData();
             renderTable();
           });
         });
@@ -1322,6 +1418,7 @@
           }
           // Sort entries chronologically by date
           entries.sort((a, b) => a.date.localeCompare(b.date));
+          saveStoredData();
           resetFormMode();
         } else {
           entries.push({
@@ -1334,6 +1431,7 @@
           });
           // Sort entries chronologically by date
           entries.sort((a, b) => a.date.localeCompare(b.date));
+          saveStoredData();
 
           // Keep current date for fast consecutive entry of same day's receipts
           partnerNameInput.value = '';
@@ -1963,6 +2061,7 @@
           });
 
           renderPartnerChips();
+          saveStoredData();
           hideImportModal();
 
           formError.textContent = `นำเข้าสำเร็จ! เพิ่มพาร์ทเนอร์ใหม่ ${addedCount} รายการ`;
@@ -2007,6 +2106,7 @@
 
           renderPartnerChips();
           resetFormMode();
+          saveStoredData();
           hideImportModal();
 
           formError.textContent = `นำเข้าสำเร็จ! เพิ่มข้อมูลใบกำกับภาษี ${parsedImportInvoices.length} รายการลงในตาราง`;
@@ -2018,6 +2118,158 @@
           }, 4000);
         }
       });
+
+      // --- Firebase Setup & Operations ---
+      const dbSettingsModal = document.getElementById('dbSettingsModal');
+      const openDbSettingsBtn = document.getElementById('openDbSettingsBtn');
+      const closeDbSettingsModalBtn = document.getElementById('closeDbSettingsModalBtn');
+      const cancelDbSettingsBtn = document.getElementById('cancelDbSettingsBtn');
+      const saveDbSettingsBtn = document.getElementById('saveDbSettingsBtn');
+      const enableFirebaseCheckbox = document.getElementById('enableFirebaseCheckbox');
+      const firebaseConfigFields = document.getElementById('firebaseConfigFields');
+      const firebaseStatus = document.getElementById('firebaseStatus');
+
+      const fbApiKey = document.getElementById('fbApiKey');
+      const fbAuthDomain = document.getElementById('fbAuthDomain');
+      const fbProjectId = document.getElementById('fbProjectId');
+      const fbAppId = document.getElementById('fbAppId');
+      const fbCollection = document.getElementById('fbCollection');
+
+      let firestoreDb = null;
+      let firebaseActive = false;
+
+      function openDbModal() {
+        dbSettingsModal.classList.add('open');
+        
+        // Load saved settings from local storage if any
+        try {
+          const savedConfig = localStorage.getItem(STORAGE_KEYS.FB_CONFIG);
+          if (savedConfig) {
+            const parsed = JSON.parse(savedConfig);
+            enableFirebaseCheckbox.checked = parsed.enabled;
+            fbApiKey.value = parsed.apiKey || '';
+            fbAuthDomain.value = parsed.authDomain || '';
+            fbProjectId.value = parsed.projectId || '';
+            fbAppId.value = parsed.appId || '';
+            fbCollection.value = parsed.collection || 'tax_invoices';
+            
+            firebaseConfigFields.style.display = parsed.enabled ? 'block' : 'none';
+          }
+        } catch (e) {}
+      }
+
+      function closeDbModal() {
+        dbSettingsModal.classList.remove('open');
+      }
+
+      openDbSettingsBtn.addEventListener('click', openDbModal);
+      closeDbSettingsModalBtn.addEventListener('click', closeDbModal);
+      cancelDbSettingsBtn.addEventListener('click', closeDbModal);
+
+      enableFirebaseCheckbox.addEventListener('change', function() {
+        firebaseConfigFields.style.display = this.checked ? 'block' : 'none';
+      });
+
+      function initFirebaseConnection() {
+        try {
+          const savedConfig = localStorage.getItem(STORAGE_KEYS.FB_CONFIG);
+          if (savedConfig) {
+            const parsed = JSON.parse(savedConfig);
+            if (parsed.enabled && typeof firebase !== 'undefined') {
+              // check if configuration is set
+              if (parsed.apiKey && parsed.projectId && parsed.appId) {
+                if (firebase.apps.length === 0) {
+                  firebase.initializeApp({
+                    apiKey: parsed.apiKey,
+                    authDomain: parsed.authDomain,
+                    projectId: parsed.projectId,
+                    appId: parsed.appId
+                  });
+                }
+                firestoreDb = firebase.firestore();
+                firebaseActive = true;
+                firebaseStatus.textContent = 'สถานะ: เชื่อมต่อคลาวด์สำเร็จ! กำลังใช้งาน Firestore (Collection: ' + (parsed.collection || 'tax_invoices') + ')';
+                firebaseStatus.style.color = 'var(--brand)';
+                
+                // Fetch collection
+                fetchFromFirestore();
+              } else {
+                firebaseStatus.textContent = 'สถานะ: ไม่สามารถเชื่อมต่อได้ (กรอกข้อมูล Firebase ไม่ครบถ้วน)';
+                firebaseStatus.style.color = 'var(--danger)';
+              }
+            } else {
+              firebaseActive = false;
+              firebaseStatus.textContent = 'สถานะ: กำลังใช้งานระบบบันทึกในเครื่อง (LocalStorage)';
+              firebaseStatus.style.color = 'var(--muted)';
+            }
+          }
+        } catch (e) {
+          console.warn(e);
+        }
+      }
+
+      function fetchFromFirestore() {
+        if (!firestoreDb || !firebaseActive) return;
+        const col = fbCollection.value.trim() || 'tax_invoices';
+        firestoreDb.collection(col).orderBy('date').get()
+          .then((querySnapshot) => {
+            const temp = [];
+            querySnapshot.forEach((doc) => {
+              const data = doc.data();
+              temp.push({
+                id: doc.id,
+                date: data.date,
+                partnerName: data.partnerName,
+                taxId: data.taxId,
+                invoiceNo: data.invoiceNo,
+                amount: Number(data.amount) || 0
+              });
+            });
+            if (temp.length > 0) {
+              entries = temp;
+              renderTable();
+            }
+          })
+          .catch((error) => {
+            console.warn("Firestore fetch failed, using local storage: ", error);
+          });
+      }
+
+      function syncWithFirestore() {
+        if (!firestoreDb || !firebaseActive) return;
+        const col = fbCollection.value.trim() || 'tax_invoices';
+        
+        entries.forEach(row => {
+          firestoreDb.collection(col).doc(String(row.id)).set({
+            date: row.date,
+            partnerName: row.partnerName,
+            taxId: row.taxId,
+            invoiceNo: row.invoiceNo,
+            amount: Number(row.amount) || 0
+          }).catch(err => console.error("Firestore sync error: ", err));
+        });
+      }
+
+      saveDbSettingsBtn.addEventListener('click', function() {
+        const config = {
+          enabled: enableFirebaseCheckbox.checked,
+          apiKey: fbApiKey.value.trim(),
+          authDomain: fbAuthDomain.value.trim(),
+          projectId: fbProjectId.value.trim(),
+          appId: fbAppId.value.trim(),
+          collection: fbCollection.value.trim() || 'tax_invoices'
+        };
+
+        try {
+          localStorage.setItem(STORAGE_KEYS.FB_CONFIG, JSON.stringify(config));
+        } catch (e) {}
+
+        initFirebaseConnection();
+        closeDbModal();
+      });
+
+      // Try automatic initialization on start
+      setTimeout(initFirebaseConnection, 100);
 
       // Initialize UI
       renderPartnerChips();
