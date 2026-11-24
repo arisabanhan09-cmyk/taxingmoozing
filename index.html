@@ -906,27 +906,27 @@
 
       <div class="form-group">
         <label class="checkbox-label" style="font-weight: 700; margin-bottom: var(--space-2);">
-          <input type="checkbox" id="enableFirebaseCheckbox">
+          <input type="checkbox" id="enableFirebaseCheckbox" checked>
           <span>เปิดใช้งานระบบ Firebase Firestore ซิงก์ข้อมูลคลาวด์</span>
         </label>
       </div>
 
-      <div id="firebaseConfigFields" style="display: none; border-top: 1px dashed var(--border); padding-top: var(--space-3); margin-top: var(--space-2);">
+      <div id="firebaseConfigFields" style="display: block; border-top: 1px dashed var(--border); padding-top: var(--space-3); margin-top: var(--space-2);">
         <div class="form-group" style="margin-bottom: var(--space-2);">
           <label class="form-label" for="fbApiKey" style="font-size: 13px;">apiKey</label>
-          <input type="text" id="fbApiKey" class="form-control" style="padding: 6px 10px; font-size: 13px;" placeholder="AIzaSy...">
+          <input type="text" id="fbApiKey" class="form-control" style="padding: 6px 10px; font-size: 13px;" value="xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx">
         </div>
         <div class="form-group" style="margin-bottom: var(--space-2);">
           <label class="form-label" for="fbAuthDomain" style="font-size: 13px;">authDomain</label>
-          <input type="text" id="fbAuthDomain" class="form-control" style="padding: 6px 10px; font-size: 13px;" placeholder="your-project.firebaseapp.com">
+          <input type="text" id="fbAuthDomain" class="form-control" style="padding: 6px 10px; font-size: 13px;" value="taxingmoozing.firebaseapp.com">
         </div>
         <div class="form-group" style="margin-bottom: var(--space-2);">
           <label class="form-label" for="fbProjectId" style="font-size: 13px;">projectId</label>
-          <input type="text" id="fbProjectId" class="form-control" style="padding: 6px 10px; font-size: 13px;" placeholder="your-project-id">
+          <input type="text" id="fbProjectId" class="form-control" style="padding: 6px 10px; font-size: 13px;" value="taxingmoozing">
         </div>
         <div class="form-group" style="margin-bottom: var(--space-2);">
           <label class="form-label" for="fbAppId" style="font-size: 13px;">appId</label>
-          <input type="text" id="fbAppId" class="form-control" style="padding: 6px 10px; font-size: 13px;" placeholder="1:12345:web:abcd...">
+          <input type="text" id="fbAppId" class="form-control" style="padding: 6px 10px; font-size: 13px;" value="1:308332216537:web:66b491612e677f89cbbec8">
         </div>
         <div class="form-group" style="margin-bottom: var(--space-2);">
           <label class="form-label" for="fbCollection" style="font-size: 13px;">ชื่อ Collection (Firestore)</label>
