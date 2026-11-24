@@ -8,9 +8,9 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;500;600;700&display=swap" rel="stylesheet">
   <!-- Firebase Compat SDKs -->
-  <!-- Firebase Compat SDKs -->
 <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-firestore-compat.js"></script>
+
   <style>
     :root {
       --bg: #f4f6f8;
@@ -625,9 +625,6 @@
         </button>
         <button type="button" class="btn btn-secondary" id="openDbSettingsBtn" style="color: var(--accent); border-color: var(--accent);" title="เชื่อมต่อคลาวด์ Firebase Firestore เพื่อซิงก์และจัดเก็บข้อมูลออนไลน์">
           ⚙️ เชื่อมต่อ Firebase
-        </button>
-        <button type="button" class="btn btn-secondary" id="loadSampleBtn" title="โหลดข้อมูล 16 รายการตามภาพตัวอย่าง">
-          โหลดข้อมูลจากภาพตัวอย่าง
         </button>
         <button type="button" class="btn btn-secondary" id="copyExcelBtn" title="คัดลอกตารางพร้อมสีและเส้นขอบไปวางใน Excel ได้ทันที">
           คัดลอกตารางวางใน Excel
@@ -1524,10 +1521,7 @@
         }
       });
 
-      loadSampleBtn.addEventListener('click', function () {
-        entries = IMAGE_ROWS.map(r => ({ ...r }));
-        resetFormMode();
-      });
+
 
       const THAI_MONTHS = [
         'มกราคม', 'กุมภาพันธ์', 'มีนาคม', 'เมษายน', 'พฤษภาคม', 'มิถุนายน',
@@ -2309,7 +2303,7 @@
             querySnapshot.forEach((doc) => {
               const data = doc.data();
               temp.push({
-                id: doc.id,
+                id: isNaN(Number(doc.id)) ? doc.id : Number(doc.id),
                 date: data.date,
                 partnerName: data.partnerName,
                 taxId: data.taxId,
