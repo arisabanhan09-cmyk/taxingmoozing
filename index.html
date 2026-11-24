@@ -1022,15 +1022,9 @@
 
       function loadStoredData() {
         try {
-          const savedConfig = localStorage.getItem(STORAGE_KEYS.FB_CONFIG);
-          const parsedConfig = savedConfig ? JSON.parse(savedConfig) : null;
-          const firebaseIsEnabled = parsedConfig ? parsedConfig.enabled : true;
-
-          if (!firebaseIsEnabled) {
-            const storedEntries = localStorage.getItem(STORAGE_KEYS.ENTRIES);
-            if (storedEntries) {
-              entries = JSON.parse(storedEntries);
-            }
+          const storedEntries = localStorage.getItem(STORAGE_KEYS.ENTRIES);
+          if (storedEntries) {
+            entries = JSON.parse(storedEntries);
           }
           const storedPartners = localStorage.getItem(STORAGE_KEYS.PARTNERS);
           if (storedPartners) {
@@ -1047,12 +1041,7 @@
 
       function saveStoredData() {
         try {
-          if (firebaseActive) {
-            // Keep local storage empty of entries so it is strictly online and not kept on this machine!
-            localStorage.removeItem(STORAGE_KEYS.ENTRIES);
-          } else {
-            localStorage.setItem(STORAGE_KEYS.ENTRIES, JSON.stringify(entries));
-          }
+          localStorage.setItem(STORAGE_KEYS.ENTRIES, JSON.stringify(entries));
           localStorage.setItem(STORAGE_KEYS.PARTNERS, JSON.stringify(partners));
         } catch (e) {
           console.warn('LocalStorage save failed', e);
@@ -2332,6 +2321,10 @@
           })
           .catch((error) => {
             console.warn("Firestore fetch failed, using local storage: ", error);
+            if (error.code === 'permission-denied' || error.message.includes('permission')) {
+              firebaseStatus.textContent = '⚠️ ดึงข้อมูลคลาวด์ล้มเหลว: เกิดข้อผิดพลาดด้านสิทธิ์ (Permission Denied) กรุณาแก้ไขแท็บ Rules ใน Firebase Console ให้เป็น allow read, write: if true;';
+              firebaseStatus.style.color = 'var(--danger)';
+            }
           });
       }
 
@@ -2346,7 +2339,13 @@
             taxId: row.taxId,
             invoiceNo: row.invoiceNo,
             amount: Number(row.amount) || 0
-          }).catch(err => console.error("Firestore sync error: ", err));
+          }).catch(err => {
+            console.error("Firestore sync error: ", err);
+            if (err.code === 'permission-denied' || err.message.includes('permission')) {
+              firebaseStatus.textContent = '⚠️ บันทึกออนไลน์ล้มเหลว: เกิดข้อผิดพลาดด้านสิทธิ์ (Permission Denied) กรุณาแก้ไขแท็บ Rules ใน Firebase Console ให้เป็น allow read, write: if true;';
+              firebaseStatus.style.color = 'var(--danger)';
+            }
+          });
         });
       }
 
