@@ -793,6 +793,9 @@
         </div>
 
         <div>
+          <button type="button" class="btn btn-danger-ghost" id="clearMonthBtn" style="display: none; border: 1px solid var(--danger); margin-right: 8px;">
+            🗑️ ล้างข้อมูลเฉพาะเดือนนี้
+          </button>
           <button type="button" class="btn btn-danger-ghost" id="clearAllBtn" style="display: none;">
             ล้างข้อมูลในตารางทั้งหมด
           </button>
@@ -933,6 +936,22 @@
 
       <div id="firebaseStatus" style="font-size: 13px; font-weight: 600; margin-bottom: var(--space-3); color: var(--muted); margin-top: var(--space-2);">
         สถานะ: กำลังใช้งานระบบบันทึกในเครื่อง (LocalStorage)
+      </div>
+
+      <div style="border-top: 1px dashed var(--border); padding-top: var(--space-3); margin-top: var(--space-3); margin-bottom: var(--space-3);">
+        <h4 style="margin: 0 0 var(--space-2); font-size: 13.5px; font-weight: 700; color: var(--ink);">💾 ระบบสำรองข้อมูลเครื่อง (LocalStorage Backup)</h4>
+        <p style="font-size: 12px; color: var(--muted); margin-top: 0; margin-bottom: var(--space-3);">
+          เนื่องจากข้อมูลจะบันทึกไว้ในบราวเซอร์ของเครื่องนี้เท่านั้น หากคุณต้องการเปลี่ยนเครื่องคอมพิวเตอร์ หรือล้างคุกกี้ คุณสามารถสำรองข้อมูลเก็บไว้เป็นไฟล์เพื่อกู้คืนทีหลังได้ค่ะ
+        </p>
+        <div style="display: flex; gap: var(--space-2); flex-wrap: wrap;">
+          <button type="button" class="btn btn-secondary" id="backupDataBtn" style="padding: 6px 12px; font-size: 12.5px; display: inline-flex; align-items: center; gap: 4px; border-color: var(--brand); color: var(--brand);" title="ดาวน์โหลดไฟล์สำรองข้อมูล .json เก็บไว้">
+            💾 ดาวน์โหลดไฟล์สำรอง (.json)
+          </button>
+          <button type="button" class="btn btn-secondary" id="restoreDataBtn" style="padding: 6px 12px; font-size: 12.5px; display: inline-flex; align-items: center; gap: 4px; border-color: var(--accent); color: var(--accent);" title="อัปโหลดไฟล์สำรอง .json เพื่อกู้คืนข้อมูลเดิม">
+            📂 นำเข้าไฟล์สำรองเพื่อกู้คืน
+          </button>
+          <input type="file" id="restoreFileInput" accept=".json" style="display: none;">
+        </div>
       </div>
 
       <div style="display: flex; justify-content: flex-end; gap: var(--space-2);">
@@ -1268,8 +1287,11 @@
           bannerTitleCell.textContent = sheetTitleInput.value.trim() || 'ยอดซื้อรวมทุกเดือน';
         }
 
+        const clearMonthBtn = document.getElementById('clearMonthBtn');
+
         if (filteredEntries.length === 0) {
           clearAllBtn.style.display = entries.length > 0 ? 'inline-flex' : 'none';
+          if (clearMonthBtn) clearMonthBtn.style.display = 'none';
           invoiceTableBody.innerHTML = `
             <tr>
               <td colspan="7" class="empty-sheet-state">
@@ -1282,6 +1304,15 @@
         }
 
         clearAllBtn.style.display = 'inline-flex';
+        if (clearMonthBtn) {
+          if (filterMonth !== 'all') {
+            clearMonthBtn.style.display = 'inline-flex';
+            const monthLabel = getThaiMonthYearName(filterMonth + '-01');
+            clearMonthBtn.textContent = `🗑️ ล้างข้อมูลเฉพาะเดือน ${monthLabel}`;
+          } else {
+            clearMonthBtn.style.display = 'none';
+          }
+        }
 
         let lastDate = null;
         let tableRowsHtml = filteredEntries.map((row, idx) => {
@@ -1332,6 +1363,7 @@
             if (editingId === id) {
               resetFormMode();
             }
+            deleteFromFirestore(id);
             saveStoredData();
             renderTable();
           });
@@ -1448,9 +1480,47 @@
       groupDateCheckbox.addEventListener('change', renderTable);
       filterMonthSelect.addEventListener('change', renderTable);
 
+      // Delete specific doc from Firestore when deleted in table
+      function deleteFromFirestore(id) {
+        if (!firestoreDb || !firebaseActive) return;
+        const col = fbCollection.value.trim() || 'tax_invoices';
+        firestoreDb.collection(col).doc(String(id)).delete()
+          .catch(err => console.error("Firestore delete error: ", err));
+      }
+
+      const clearMonthBtn = document.getElementById('clearMonthBtn');
+      if (clearMonthBtn) {
+        clearMonthBtn.addEventListener('click', function() {
+          const filterMonth = filterMonthSelect.value;
+          if (filterMonth === 'all') return;
+          const monthLabel = getThaiMonthYearName(filterMonth + '-01');
+          
+          if (confirm(`คุณต้องการลบข้อมูลใบเสร็จทั้งหมดของเดือน ${monthLabel} หรือไม่?\n(การลบนี้จะถูกซิงก์ไปที่ Firebase และ LocalStorage)`)) {
+            const toDelete = entries.filter(r => r.date && r.date.substring(0, 7) === filterMonth);
+            
+            // Delete from Firestore
+            toDelete.forEach(row => {
+              deleteFromFirestore(row.id);
+            });
+            
+            // Filter entries
+            entries = entries.filter(r => !r.date || r.date.substring(0, 7) !== filterMonth);
+            
+            saveStoredData();
+            renderTable();
+          }
+        });
+      }
+
       clearAllBtn.addEventListener('click', function () {
-        entries = [];
-        resetFormMode();
+        if (confirm('คุณต้องการล้างข้อมูลในตารางทั้งหมดหรือไม่?\n(ข้อมูลใน LocalStorage และ Firebase ของตารางปัจจุบันจะถูกลบทั้งหมด)')) {
+          entries.forEach(row => {
+            deleteFromFirestore(row.id);
+          });
+          entries = [];
+          saveStoredData();
+          resetFormMode();
+        }
       });
 
       loadSampleBtn.addEventListener('click', function () {
@@ -2143,18 +2213,28 @@
         
         // Load saved settings from local storage if any
         try {
+          const DEFAULT_CONFIG = {
+            enabled: true, 
+            apiKey: "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+            authDomain: "taxingmoozing.firebaseapp.com",
+            projectId: "taxingmoozing",
+            appId: "1:308332216537:web:66b491612e677f89cbbec8",
+            collection: "tax_invoices"
+          };
           const savedConfig = localStorage.getItem(STORAGE_KEYS.FB_CONFIG);
-          if (savedConfig) {
-            const parsed = JSON.parse(savedConfig);
-            enableFirebaseCheckbox.checked = parsed.enabled;
-            fbApiKey.value = parsed.apiKey || '';
-            fbAuthDomain.value = parsed.authDomain || '';
-            fbProjectId.value = parsed.projectId || '';
-            fbAppId.value = parsed.appId || '';
-            fbCollection.value = parsed.collection || 'tax_invoices';
-            
-            firebaseConfigFields.style.display = parsed.enabled ? 'block' : 'none';
+          let parsed = savedConfig ? JSON.parse(savedConfig) : null;
+          if (!parsed || !parsed.apiKey) {
+            parsed = DEFAULT_CONFIG;
           }
+          
+          enableFirebaseCheckbox.checked = parsed.enabled;
+          fbApiKey.value = parsed.apiKey || '';
+          fbAuthDomain.value = parsed.authDomain || '';
+          fbProjectId.value = parsed.projectId || '';
+          fbAppId.value = parsed.appId || '';
+          fbCollection.value = parsed.collection || 'tax_invoices';
+          
+          firebaseConfigFields.style.display = parsed.enabled ? 'block' : 'none';
         } catch (e) {}
       }
 
@@ -2172,36 +2252,47 @@
 
       function initFirebaseConnection() {
         try {
+          const DEFAULT_CONFIG = {
+            enabled: true, 
+            apiKey: "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+            authDomain: "taxingmoozing.firebaseapp.com",
+            projectId: "taxingmoozing",
+            appId: "1:308332216537:web:66b491612e677f89cbbec8",
+            collection: "tax_invoices"
+          };
+
           const savedConfig = localStorage.getItem(STORAGE_KEYS.FB_CONFIG);
-          if (savedConfig) {
-            const parsed = JSON.parse(savedConfig);
-            if (parsed.enabled && typeof firebase !== 'undefined') {
-              // check if configuration is set
-              if (parsed.apiKey && parsed.projectId && parsed.appId) {
-                if (firebase.apps.length === 0) {
-                  firebase.initializeApp({
-                    apiKey: parsed.apiKey,
-                    authDomain: parsed.authDomain,
-                    projectId: parsed.projectId,
-                    appId: parsed.appId
-                  });
-                }
-                firestoreDb = firebase.firestore();
-                firebaseActive = true;
-                firebaseStatus.textContent = 'สถานะ: เชื่อมต่อคลาวด์สำเร็จ! กำลังใช้งาน Firestore (Collection: ' + (parsed.collection || 'tax_invoices') + ')';
-                firebaseStatus.style.color = 'var(--brand)';
-                
-                // Fetch collection
-                fetchFromFirestore();
-              } else {
-                firebaseStatus.textContent = 'สถานะ: ไม่สามารถเชื่อมต่อได้ (กรอกข้อมูล Firebase ไม่ครบถ้วน)';
-                firebaseStatus.style.color = 'var(--danger)';
+          let parsed = savedConfig ? JSON.parse(savedConfig) : null;
+          if (!parsed || !parsed.apiKey) {
+            parsed = DEFAULT_CONFIG;
+          }
+
+          if (parsed && parsed.enabled && typeof firebase !== 'undefined') {
+            // check if configuration is set
+            if (parsed.apiKey && parsed.projectId && parsed.appId) {
+              if (firebase.apps.length === 0) {
+                firebase.initializeApp({
+                  apiKey: parsed.apiKey,
+                  authDomain: parsed.authDomain,
+                  projectId: parsed.projectId,
+                  appId: parsed.appId
+                });
               }
+              firestoreDb = firebase.firestore();
+              firebaseActive = true;
+              firebaseStatus.textContent = 'สถานะ: เชื่อมต่อคลาวด์สำเร็จ! กำลังใช้งาน Firestore (Collection: ' + (parsed.collection || 'tax_invoices') + ')';
+              firebaseStatus.style.color = 'var(--brand)';
+              
+              // Fetch collection
+              fetchFromFirestore();
             } else {
-              firebaseActive = false;
-              firebaseStatus.textContent = 'สถานะ: กำลังใช้งานระบบบันทึกในเครื่อง (LocalStorage)';
-              firebaseStatus.style.color = 'var(--muted)';
+              firebaseStatus.textContent = 'สถานะ: ไม่สามารถเชื่อมต่อได้ (กรอกข้อมูล Firebase ไม่ครบถ้วน)';
+              firebaseStatus.style.color = 'var(--danger)';
             }
+          } else {
+            firebaseActive = false;
+            firebaseStatus.textContent = 'สถานะ: กำลังใช้งานระบบบันทึกในเครื่อง (LocalStorage)';
+            firebaseStatus.style.color = 'var(--muted)';
           }
         } catch (e) {
           console.warn(e);
@@ -2270,6 +2361,78 @@
 
       // Try automatic initialization on start
       setTimeout(initFirebaseConnection, 100);
+
+      // --- LocalStorage Backup & Restore File Handlers ---
+      const backupDataBtn = document.getElementById('backupDataBtn');
+      const restoreDataBtn = document.getElementById('restoreDataBtn');
+      const restoreFileInput = document.getElementById('restoreFileInput');
+
+      if (backupDataBtn) {
+        backupDataBtn.addEventListener('click', function() {
+          const backupObj = {
+            entries: entries,
+            partners: partners,
+            timestamp: new Date().toISOString(),
+            version: 'v3'
+          };
+          const dataStr = JSON.stringify(backupObj, null, 2);
+          const blob = new Blob([dataStr], { type: 'application/json' });
+          const url = URL.createObjectURL(blob);
+          const link = document.createElement('a');
+          const today = new Date().toISOString().slice(0, 10);
+          link.href = url;
+          link.download = `tax-invoice-backup-${today}.json`;
+          document.body.appendChild(link);
+          link.click();
+          document.body.removeChild(link);
+          URL.revokeObjectURL(url);
+          
+          firebaseStatus.textContent = 'สถานะ: สำรองข้อมูลสำเร็จ! ไฟล์ .json ดาวน์โหลดแล้ว';
+          firebaseStatus.style.color = 'var(--brand)';
+        });
+      }
+
+      if (restoreDataBtn && restoreFileInput) {
+        restoreDataBtn.addEventListener('click', function() {
+          restoreFileInput.click();
+        });
+
+        restoreFileInput.addEventListener('change', function(e) {
+          const file = e.target.files[0];
+          if (!file) return;
+
+          const reader = new FileReader();
+          reader.onload = function(evt) {
+            try {
+              const parsed = JSON.parse(evt.target.result);
+              if (parsed && (Array.isArray(parsed.entries) || Array.isArray(parsed.partners))) {
+                if (Array.isArray(parsed.entries)) {
+                  entries = parsed.entries;
+                }
+                if (Array.isArray(parsed.partners)) {
+                  parsed.partners.forEach(newP => {
+                    const dup = partners.find(p => p.name.toLowerCase() === newP.name.toLowerCase());
+                    if (!dup) partners.push(newP);
+                  });
+                }
+                saveStoredData();
+                renderPartnerChips();
+                renderTable();
+                
+                firebaseStatus.textContent = 'สถานะ: นำเข้าไฟล์สำรองและกู้คืนข้อมูลสำเร็จ!';
+                firebaseStatus.style.color = 'var(--brand)';
+              } else {
+                firebaseStatus.textContent = 'สถานะ: รูปแบบไฟล์สำรองไม่ถูกต้อง!';
+                firebaseStatus.style.color = 'var(--danger)';
+              }
+            } catch (err) {
+              firebaseStatus.textContent = 'สถานะ: เกิดข้อผิดพลาดในการอ่านไฟล์! ' + err.message;
+              firebaseStatus.style.color = 'var(--danger)';
+            }
+          };
+          reader.readAsText(file);
+        });
+      }
 
       // Initialize UI
       renderPartnerChips();
