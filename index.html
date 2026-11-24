@@ -1022,9 +1022,15 @@
 
       function loadStoredData() {
         try {
-          const storedEntries = localStorage.getItem(STORAGE_KEYS.ENTRIES);
-          if (storedEntries) {
-            entries = JSON.parse(storedEntries);
+          const savedConfig = localStorage.getItem(STORAGE_KEYS.FB_CONFIG);
+          const parsedConfig = savedConfig ? JSON.parse(savedConfig) : null;
+          const firebaseIsEnabled = parsedConfig ? parsedConfig.enabled : true;
+
+          if (!firebaseIsEnabled) {
+            const storedEntries = localStorage.getItem(STORAGE_KEYS.ENTRIES);
+            if (storedEntries) {
+              entries = JSON.parse(storedEntries);
+            }
           }
           const storedPartners = localStorage.getItem(STORAGE_KEYS.PARTNERS);
           if (storedPartners) {
@@ -1041,7 +1047,12 @@
 
       function saveStoredData() {
         try {
-          localStorage.setItem(STORAGE_KEYS.ENTRIES, JSON.stringify(entries));
+          if (firebaseActive) {
+            // Keep local storage empty of entries so it is strictly online and not kept on this machine!
+            localStorage.removeItem(STORAGE_KEYS.ENTRIES);
+          } else {
+            localStorage.setItem(STORAGE_KEYS.ENTRIES, JSON.stringify(entries));
+          }
           localStorage.setItem(STORAGE_KEYS.PARTNERS, JSON.stringify(partners));
         } catch (e) {
           console.warn('LocalStorage save failed', e);
@@ -2316,10 +2327,8 @@
                 amount: Number(data.amount) || 0
               });
             });
-            if (temp.length > 0) {
-              entries = temp;
-              renderTable();
-            }
+            entries = temp;
+            renderTable();
           })
           .catch((error) => {
             console.warn("Firestore fetch failed, using local storage: ", error);
